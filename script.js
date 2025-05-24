@@ -35,9 +35,6 @@ function loadMessages(server) {
 }
 
 function clearMessages(server) {
-  if (confirm("Are you sure you want to clear the chat?")) {
-    localStorage.removeItem(server);
-    const chatBox = document.getElementById('chat-box');
-    if (chatBox) chatBox.innerHTML = '';
-  }
+  localStorage.removeItem(server);
+  document.getElementById('chat-box').innerHTML = '';
 }
