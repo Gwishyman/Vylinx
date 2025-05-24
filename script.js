@@ -33,3 +33,11 @@ function loadMessages(server) {
   const messages = JSON.parse(localStorage.getItem(server)) || [];
   messages.forEach(m => chatBox.innerHTML += `<div>${m}</div>`);
 }
+
+function clearMessages(server) {
+  if (confirm("Are you sure you want to clear the chat?")) {
+    localStorage.removeItem(server);
+    const chatBox = document.getElementById('chat-box');
+    if (chatBox) chatBox.innerHTML = '';
+  }
+}
