@@ -1,4 +1,3 @@
-// auth.js
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-app.js";
 import {
   getAuth,
@@ -12,87 +11,127 @@ import {
   doc,
   setDoc,
   getDoc,
-  query,
   collection,
+  query,
   where,
   getDocs,
   deleteDoc
 } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-firestore.js";
 
+// Firebase config
 const firebaseConfig = {
   apiKey: "AIzaSyBHY0RBY3jK7ZnuM2anIbKzFDd65xwMiyg",
   authDomain: "vylinx-11e87.firebaseapp.com",
   projectId: "vylinx-11e87",
-  storageBucket: "vylinx-11e87.firebasestorage.app",
+  storageBucket: "vylinx-11e87.appspot.com",
   messagingSenderId: "710300713760",
   appId: "1:710300713760:web:c4ee8f53be614f5869cd45"
 };
 
+// Init Firebase
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-const loginBtn = document.getElementById("login");
+// Signup Logic
 const signupBtn = document.getElementById("signup");
-
-// LOGIN
-if (loginBtn) {
-  loginBtn.onclick = async () => {
-    const emailOrUsername = document.getElementById("email").value.trim();
-    const password = document.getElementById("password").value;
-
-    let email = emailOrUsername;
-
-    if (!emailOrUsername.includes("@")) {
-      const q = query(collection(db, "users"), where("username", "==", emailOrUsername));
-      const snapshot = await getDocs(q);
-      if (snapshot.empty) return alert("Username not found");
-      email = snapshot.docs[0].data().email;
-    }
-
-    try {
-      await signInWithEmailAndPassword(auth, email, password);
-      location.href = "servers.html";
-    } catch (e) {
-      alert("Login failed: " + e.message);
-    }
-  };
-}
-
-// SIGNUP
 if (signupBtn) {
-  signupBtn.onclick = async () => {
+  signupBtn.addEventListener("click", async () => {
     const username = document.getElementById("username").value.trim();
     const email = document.getElementById("email").value.trim();
     const password = document.getElementById("password").value;
 
-    const q1 = query(collection(db, "users"), where("username", "==", username));
-    const q2 = query(collection(db, "users"), where("email", "==", email));
-    const res1 = await getDocs(q1);
-    const res2 = await getDocs(q2);
+    if (!username || !email || !password) {
+      alert("All fields are required.");
+      return;
+    }
 
-    if (!username || !email || !password) return alert("Fill all fields");
-    if (!email.includes("@")) return alert("Invalid email");
-    if (!password || password.length < 6) return alert("Password too short");
-    if (!res1.empty) return alert("Username already in use");
-    if (!res2.empty) return alert("Email already in use");
+    // Check for duplicate email or username
+    const usersRef = collection(db, "users");
+
+    const qUsername = query(usersRef, where("username", "==", username));
+    const qEmail = query(usersRef, where("email", "==", email));
+    const [usernameSnapshot, emailSnapshot] = await Promise.all([
+      getDocs(qUsername),
+      getDocs(qEmail)
+    ]);
+
+    if (!usernameSnapshot.empty) {
+      alert("Username already in use.");
+      return;
+    }
+    if (!emailSnapshot.empty) {
+      alert("Email already in use.");
+      return;
+    }
 
     try {
       const userCred = await createUserWithEmailAndPassword(auth, email, password);
-      await setDoc(doc(db, "users", userCred.user.uid), { username, email });
-      location.href = "servers.html";
-    } catch (e) {
-      alert("Signup failed: " + e.message);
+      await setDoc(doc(db, "users", userCred.user.uid), {
+        username,
+        email,
+        createdAt: Date.now()
+      });
+      window.location.href = "servers.html";
+    } catch (err) {
+      console.error("Signup Error:", err);
+      alert(err.message);
     }
-  };
+  });
 }
 
-// DELETE ACCOUNT
-export async function deleteCurrentUser() {
-  const user = auth.currentUser;
-  if (!user) return;
-  await deleteDoc(doc(db, "users", user.uid));
-  await deleteUser(user);
-  alert("Account deleted");
-  location.href = "index.html";
+// Login Logic
+const loginBtn = document.getElementById("login");
+if (loginBtn) {
+  loginBtn.addEventListener("click", async () => {
+    const identifier = document.getElementById("email").value.trim();
+    const password = document.getElementById("password").value;
+
+    if (!identifier || !password) {
+      alert("Please fill in all fields.");
+      return;
+    }
+
+    try {
+      let email = identifier;
+
+      // Check if it's a username
+      if (!identifier.includes("@")) {
+        const q = query(collection(db, "users"), where("username", "==", identifier));
+        const snapshot = await getDocs(q);
+        if (snapshot.empty) {
+          alert("Username not found.");
+          return;
+        }
+        email = snapshot.docs[0].data().email;
+      }
+
+      await signInWithEmailAndPassword(auth, email, password);
+      window.location.href = "servers.html";
+    } catch (err) {
+      console.error("Login Error:", err);
+      alert("Invalid login.");
+    }
+  });
+}
+
+// Account deletion logic (for servers.html)
+const deleteBtn = document.getElementById("delete-account");
+if (deleteBtn) {
+  deleteBtn.addEventListener("click", async () => {
+    const user = auth.currentUser;
+    if (!user) return;
+
+    if (!confirm("Are you sure you want to delete your account? This cannot be undone.")) return;
+
+    try {
+      await deleteDoc(doc(db, "users", user.uid));
+      await deleteUser(user);
+      alert("Account deleted.");
+      window.location.href = "index.html";
+    } catch (err) {
+      console.error("Account Deletion Error:", err);
+      alert("Failed to delete account. Try logging in again.");
+    }
+  });
 }
