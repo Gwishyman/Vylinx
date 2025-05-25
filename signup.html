@@ -1,29 +1,17 @@
 <!DOCTYPE html>
-<html>
-<head><title>Sign Up - Vynlinx</title><link rel="stylesheet" href="style.css"></head>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Signup</title>
+</head>
 <body>
-  <div class="login-container">
-    <h1>Sign Up</h1>
-    <input type="email" id="email" placeholder="Email">
-    <input type="password" id="password" placeholder="Password">
-    <button onclick="signup()">Sign Up</button>
-    <p>Already have an account? <a href="index.html">Login</a></p>
-  </div>
-  <script type="module">
-    import { getAuth, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-auth.js";
-    import { auth } from './firebase-config.js';
+  <h2>Signup</h2>
+  <input id="username" placeholder="Username" /><br>
+  <input id="email" placeholder="Email" /><br>
+  <input id="password" type="password" placeholder="Password" /><br>
+  <button id="signup">Signup</button>
+  <button onclick="location.href='login.html'">Go to Login</button>
 
-    async function signup() {
-      const email = document.getElementById('email').value;
-      const password = document.getElementById('password').value;
-      try {
-        await createUserWithEmailAndPassword(auth, email, password);
-        alert('Account created!');
-        window.location.href = 'index.html';
-      } catch (e) {
-        alert(e.message);
-      }
-    }
-  </script>
+  <script type="module" src="./auth.js"></script>
 </body>
 </html>
