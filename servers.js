@@ -1,34 +1,32 @@
-import { db } from './firebase-config.js';
+import { auth, db } from './firebase-config.js';
 import {
   collection,
   addDoc,
-  getDocs,
   onSnapshot,
   doc
-} from 'https://www.gstatic.com/firebasejs/11.8.1/firebase-firestore.js';
-
-const serversList = document.getElementById('servers');
-const createServerBtn = document.getElementById('create-server-btn');
-
-createServerBtn?.addEventListener('click', async () => {
-  const serverName = prompt("Enter server name:");
-  if (serverName) {
-    await addDoc(collection(db, 'servers'), {
-      name: serverName
-    });
-  }
-});
+} from "https://www.gstatic.com/firebasejs/11.8.1/firebase-firestore.js";
 
 const serversRef = collection(db, 'servers');
-onSnapshot(serversRef, (snapshot) => {
-  serversList.innerHTML = '';
-  snapshot.forEach((docSnap) => {
+const list = document.getElementById('servers');
+const createBtn = document.getElementById('create-server-btn');
+
+createBtn?.addEventListener('click', async () => {
+  const name = prompt("Server name:");
+  if (!name) return;
+  await addDoc(serversRef, {
+    name,
+    createdBy: auth.currentUser.uid
+  });
+});
+
+onSnapshot(serversRef, snapshot => {
+  list.innerHTML = '';
+  snapshot.forEach(docSnap => {
     const li = document.createElement('li');
     li.textContent = docSnap.data().name;
     li.onclick = () => {
-      // Load the selected server's messages
-      loadServerMessages(docSnap.id);
+      location.href = `server.html?id=${docSnap.id}`;
     };
-    serversList.appendChild(li);
+    list.appendChild(li);
   });
 });
