@@ -1,16 +1,87 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <title>Select Server - Vylinx</title>
-  <link rel="stylesheet" href="style.css">
+  <meta charset="UTF-8" />
+  <title>Vylinx Servers</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: 'Segoe UI', sans-serif;
+      background-color: #2f3136;
+      color: white;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+    }
+
+    header {
+      background-color: #202225;
+      padding: 10px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    header h1 {
+      margin: 0;
+      font-size: 20px;
+    }
+
+    #create-server-btn {
+      font-size: 28px;
+      color: white;
+      background: #7289da;
+      border: none;
+      border-radius: 5px;
+      padding: 5px 12px;
+      cursor: pointer;
+    }
+
+    main {
+      flex: 1;
+      overflow-y: auto;
+      padding: 20px;
+    }
+
+    ul#servers {
+      list-style: none;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    ul#servers li {
+      background-color: #36393f;
+      padding: 10px 15px;
+      border-radius: 5px;
+      cursor: pointer;
+      transition: background-color 0.2s;
+    }
+
+    ul#servers li:hover {
+      background-color: #40444b;
+    }
+  </style>
 </head>
-<body onload="checkLogin()">
-  <div class="server-list">
-    <h2>Select a Server</h2>
-    <ul>
-      <li><a href="server1.html">Server 1</a></li>
-      <li><a href="server2.html">Server 2</a></li>
+<body>
+
+  <header>
+    <h1>Servers</h1>
+    <button id="create-server-btn">+</button>
+  </header>
+
+  <main>
+    <ul id="servers">
+      <!-- Server list will populate here -->
     </ul>
-  </div>
+  </main>
+
+  <!-- Firebase config -->
+  <script type="module" src="./firebase-config.js"></script>
+
+  <!-- Server management logic -->
+  <script type="module" src="./servers.js"></script>
+
 </body>
 </html>
