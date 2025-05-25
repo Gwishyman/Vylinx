@@ -1,139 +1,92 @@
-alert("auth.js loaded");
+// auth.js
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js";
+import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, deleteUser } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-auth.js";
+import { getDatabase, ref, set, get, child, remove } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-database.js";
 
-import { initializeApp } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-app.js";
-import {
-  getAuth,
-  createUserWithEmailAndPassword,
-  signInWithEmailAndPassword,
-  deleteUser,
-  onAuthStateChanged
-} from "https://www.gstatic.com/firebasejs/11.8.1/firebase-auth.js";
-import {
-  getFirestore,
-  doc,
-  setDoc,
-  getDoc,
-  collection,
-  query,
-  where,
-  getDocs,
-  deleteDoc
-} from "https://www.gstatic.com/firebasejs/11.8.1/firebase-firestore.js";
-
-// Firebase config
 const firebaseConfig = {
-  apiKey: "AIzaSyBHY0RBY3jK7ZnuM2anIbKzFDd65xwMiyg",
-  authDomain: "vylinx-11e87.firebaseapp.com",
-  projectId: "vylinx-11e87",
-  storageBucket: "vylinx-11e87.appspot.com",
-  messagingSenderId: "710300713760",
-  appId: "1:710300713760:web:c4ee8f53be614f5869cd45"
+  apiKey: "AIzaSyDz-0nN1i3DZfOvFiOtDaBrTVE3V9osU8g",
+  authDomain: "chat-app-2f6a8.firebaseapp.com",
+  projectId: "chat-app-2f6a8",
+  storageBucket: "chat-app-2f6a8.appspot.com",
+  messagingSenderId: "973274893092",
+  appId: "1:973274893092:web:700c85bb5c4f1b0f187d29",
+  databaseURL: "https://chat-app-2f6a8-default-rtdb.firebaseio.com"
 };
 
-// Init Firebase
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
-const db = getFirestore(app);
+const db = getDatabase(app);
 
-// Signup Logic
+// SIGNUP
 const signupBtn = document.getElementById("signup");
 if (signupBtn) {
   signupBtn.addEventListener("click", async () => {
-    const username = document.getElementById("username").value.trim();
-    const email = document.getElementById("email").value.trim();
-    const password = document.getElementById("password").value;
+    const username = document.getElementById("username")?.value.trim();
+    const email = document.getElementById("email")?.value.trim();
+    const password = document.getElementById("password")?.value;
 
     if (!username || !email || !password) {
-      alert("All fields are required.");
-      return;
-    }
-
-    // Check for duplicate email or username
-    const usersRef = collection(db, "users");
-
-    const qUsername = query(usersRef, where("username", "==", username));
-    const qEmail = query(usersRef, where("email", "==", email));
-    const [usernameSnapshot, emailSnapshot] = await Promise.all([
-      getDocs(qUsername),
-      getDocs(qEmail)
-    ]);
-
-    if (!usernameSnapshot.empty) {
-      alert("Username already in use.");
-      return;
-    }
-    if (!emailSnapshot.empty) {
-      alert("Email already in use.");
+      alert("Please fill out all fields.");
       return;
     }
 
     try {
-      const userCred = await createUserWithEmailAndPassword(auth, email, password);
-      await setDoc(doc(db, "users", userCred.user.uid), {
+      // Ensure username is unique
+      const snapshot = await get(ref(db, "users"));
+      const existingUsers = snapshot.exists() ? snapshot.val() : {};
+      const usernameExists = Object.values(existingUsers).some(user => user.username === username);
+      if (usernameExists) {
+        alert("Username already taken.");
+        return;
+      }
+
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      const uid = userCredential.user.uid;
+
+      await set(ref(db, "users/" + uid), {
         username,
-        email,
-        createdAt: Date.now()
+        email
       });
+
+      alert("Signup successful!");
       window.location.href = "servers.html";
-    } catch (err) {
-      console.error("Signup Error:", err);
-      alert(err.message);
+    } catch (error) {
+      alert("Signup error: " + error.message);
     }
   });
 }
 
-// Login Logic
+// LOGIN
 const loginBtn = document.getElementById("login");
 if (loginBtn) {
   loginBtn.addEventListener("click", async () => {
-    const identifier = document.getElementById("email").value.trim();
-    const password = document.getElementById("password").value;
+    const input = document.getElementById("email")?.value.trim();
+    const password = document.getElementById("password")?.value;
 
-    if (!identifier || !password) {
-      alert("Please fill in all fields.");
+    if (!input || !password) {
+      alert("Please enter both email/username and password.");
       return;
     }
 
     try {
-      let email = identifier;
-
-      // Check if it's a username
-      if (!identifier.includes("@")) {
-        const q = query(collection(db, "users"), where("username", "==", identifier));
-        const snapshot = await getDocs(q);
-        if (snapshot.empty) {
+      let emailToUse = input;
+      if (!input.includes("@")) {
+        // Assume it's a username, look up email
+        const snapshot = await get(ref(db, "users"));
+        const users = snapshot.exists() ? snapshot.val() : {};
+        const match = Object.values(users).find(user => user.username === input);
+        if (!match) {
           alert("Username not found.");
           return;
         }
-        email = snapshot.docs[0].data().email;
+        emailToUse = match.email;
       }
 
-      await signInWithEmailAndPassword(auth, email, password);
+      await signInWithEmailAndPassword(auth, emailToUse, password);
+      alert("Login successful!");
       window.location.href = "servers.html";
-    } catch (err) {
-      console.error("Login Error:", err);
-      alert("Invalid login.");
-    }
-  });
-}
-
-// Account deletion logic (for servers.html)
-const deleteBtn = document.getElementById("delete-account");
-if (deleteBtn) {
-  deleteBtn.addEventListener("click", async () => {
-    const user = auth.currentUser;
-    if (!user) return;
-
-    if (!confirm("Are you sure you want to delete your account? This cannot be undone.")) return;
-
-    try {
-      await deleteDoc(doc(db, "users", user.uid));
-      await deleteUser(user);
-      alert("Account deleted.");
-      window.location.href = "index.html";
-    } catch (err) {
-      console.error("Account Deletion Error:", err);
-      alert("Failed to delete account. Try logging in again.");
+    } catch (error) {
+      alert("Login error: " + error.message);
     }
   });
 }
