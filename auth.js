@@ -1,50 +1,71 @@
-import { auth } from './firebase-config.js';
+import { auth, db } from './firebase-config.js';
 import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
-  signOut,
-  onAuthStateChanged
-} from 'https://www.gstatic.com/firebasejs/11.8.1/firebase-auth.js';
+  deleteUser
+} from "https://www.gstatic.com/firebasejs/11.8.1/firebase-auth.js";
 
-const loginForm = document.getElementById('login-form');
-const signupForm = document.getElementById('signup-form');
-const logoutBtn = document.getElementById('logout-btn');
-const chatSection = document.getElementById('chat-section');
+import {
+  collection,
+  addDoc,
+  getDocs,
+  query,
+  where,
+  deleteDoc,
+  doc
+} from "https://www.gstatic.com/firebasejs/11.8.1/firebase-firestore.js";
 
-loginForm?.addEventListener('submit', async (e) => {
-  e.preventDefault();
-  const email = loginForm['login-email'].value;
-  const password = loginForm['login-password'].value;
-  try {
-    await signInWithEmailAndPassword(auth, email, password);
-  } catch (err) {
-    alert(err.message);
-  }
+// SIGN UP
+document.getElementById('signup')?.addEventListener('click', async () => {
+  const username = document.getElementById('username').value.trim();
+  const email = document.getElementById('email').value.trim();
+  const password = document.getElementById('password').value;
+
+  // Check uniqueness
+  const usernames = await getDocs(query(collection(db, 'usernames'), where("username", "==", username)));
+  if (!usernames.empty) return alert("Username taken");
+
+  const emails = await getDocs(query(collection(db, 'usernames'), where("email", "==", email)));
+  if (!emails.empty) return alert("Email taken");
+
+  const userCred = await createUserWithEmailAndPassword(auth, email, password);
+  await addDoc(collection(db, 'usernames'), {
+    uid: userCred.user.uid,
+    email,
+    username
+  });
+
+  location.href = 'servers.html';
 });
 
-signupForm?.addEventListener('submit', async (e) => {
-  e.preventDefault();
-  const email = signupForm['signup-email'].value;
-  const password = signupForm['signup-password'].value;
-  try {
-    await createUserWithEmailAndPassword(auth, email, password);
-  } catch (err) {
-    alert(err.message);
+// LOGIN
+document.getElementById('login')?.addEventListener('click', async () => {
+  const identifier = document.getElementById('email').value.trim();
+  const password = document.getElementById('password').value;
+
+  let email = identifier;
+
+  // If username was used, convert to email
+  if (!identifier.includes('@')) {
+    const usernameSnap = await getDocs(query(collection(db, 'usernames'), where("username", "==", identifier)));
+    if (usernameSnap.empty) return alert("Invalid username");
+    email = usernameSnap.docs[0].data().email;
   }
+
+  await signInWithEmailAndPassword(auth, email, password);
+  location.href = 'servers.html';
 });
 
-logoutBtn?.addEventListener('click', async () => {
-  await signOut(auth);
-});
+// DELETE ACCOUNT
+document.getElementById('delete-account')?.addEventListener('click', async () => {
+  const user = auth.currentUser;
+  const usernameSnap = await getDocs(query(collection(db, 'usernames'), where("uid", "==", user.uid)));
 
-onAuthStateChanged(auth, (user) => {
-  if (user) {
-    loginForm?.classList.add('hidden');
-    signupForm?.classList.add('hidden');
-    chatSection?.classList.remove('hidden');
-  } else {
-    loginForm?.classList.remove('hidden');
-    signupForm?.classList.remove('hidden');
-    chatSection?.classList.add('hidden');
+  for (const docSnap of usernameSnap.docs) {
+    await deleteDoc(doc(db, 'usernames', docSnap.id));
   }
+
+  await deleteUser(user);
+  alert("Account deleted");
+  location.href = 'login.html';
 });
