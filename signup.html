@@ -3,16 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <title>Signup</title>
-  <script src="https://www.gstatic.com/firebasejs/11.8.1/firebase-app.js" type="module"></script>
-    <!-- Firebase Auth -->
-    <script src="https://www.gstatic.com/firebasejs/11.8.1/firebase-auth.js" type="module"></script>
-    <!-- Firebase Firestore -->
-    <script src="https://www.gstatic.com/firebasejs/11.8.1/firebase-firestore.js" type="module"></script>
-
-<!-- Your Firebase config and app logic -->
-<script type="module" src="./firebase-config.js"></script>
   <style>
-    /* Same styles as login for consistency */
     body {
       margin: 0;
       height: 100vh;
@@ -64,13 +55,10 @@
       cursor: pointer;
       font-weight: 600;
       transition: background-color 0.25s ease;
-    }
-
-    #signup {
       background-color: #3a86ff;
       color: white;
     }
-    #signup:hover {
+    button:hover {
       background-color: #2a6ed1;
     }
 
@@ -84,19 +72,24 @@
       background-color: #3a86ff;
       color: white;
     }
+
     a {
-        color: #3dacc3;
+      color: #3dacc3;
+      text-decoration: none;
+    }
+    a:hover {
+      text-decoration: underline;
     }
   </style>
 </head>
 <body>
   <div class="container">
-    <h2>Sign up</h2>
+    <h2>Signup</h2>
     <input id="username" placeholder="Username" autocomplete="username" />
     <input id="email" placeholder="Email" autocomplete="email" />
     <input id="password" type="password" placeholder="Password" autocomplete="new-password" />
     <button id="signup">Signup</button>
-    Already have an account? <a href="login.html">Login</a>
+    <p>Already have an account? <a href="login.html">Login</a></p>
   </div>
 
   <script type="module" src="./auth.js"></script>
