@@ -4,13 +4,13 @@ import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, de
 import { getDatabase, ref, set, get, child, remove } from "https://www.gstatic.com/firebasejs/10.11.0/firebase-database.js";
 
 const firebaseConfig = {
-  apiKey: "AIzaSyDz-0nN1i3DZfOvFiOtDaBrTVE3V9osU8g",
-  authDomain: "chat-app-2f6a8.firebaseapp.com",
-  projectId: "chat-app-2f6a8",
-  storageBucket: "chat-app-2f6a8.appspot.com",
-  messagingSenderId: "973274893092",
-  appId: "1:973274893092:web:700c85bb5c4f1b0f187d29",
-  databaseURL: "https://chat-app-2f6a8-default-rtdb.firebaseio.com"
+  apiKey: "AIzaSyBHY0RBY3jK7ZnuM2anIbKzFDd65xwMiyg",
+  authDomain: "vylinx-11e87.firebaseapp.com",
+  projectId: "vylinx-11e87",
+  storageBucket: "vylinx-11e87.appspot.com", // fixed domain
+  messagingSenderId: "710300713760",
+  appId: "1:710300713760:web:c4ee8f53be614f5869cd45",
+  databaseURL: "https://vylinx-11e87-default-rtdb.firebaseio.com" // this is the required line
 };
 
 const app = initializeApp(firebaseConfig);
