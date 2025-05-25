@@ -21,21 +21,44 @@ document.getElementById('signup')?.addEventListener('click', async () => {
   const email = document.getElementById('email').value.trim();
   const password = document.getElementById('password').value;
 
-  // Check uniqueness
-  const usernames = await getDocs(query(collection(db, 'usernames'), where("username", "==", username)));
-  if (!usernames.empty) return alert("Username taken");
+  if (!username || !email || !password) {
+    alert('Please fill in all fields.');
+    return;
+  }
 
-  const emails = await getDocs(query(collection(db, 'usernames'), where("email", "==", email)));
-  if (!emails.empty) return alert("Email taken");
+  try {
+    // Check if username is taken
+    const usernameQuery = query(collection(db, 'usernames'), where("username", "==", username));
+    const usernamesSnap = await getDocs(usernameQuery);
+    if (!usernamesSnap.empty) {
+      alert("Username taken");
+      return;
+    }
 
-  const userCred = await createUserWithEmailAndPassword(auth, email, password);
-  await addDoc(collection(db, 'usernames'), {
-    uid: userCred.user.uid,
-    email,
-    username
-  });
+    // Check if email is taken
+    const emailQuery = query(collection(db, 'usernames'), where("email", "==", email));
+    const emailsSnap = await getDocs(emailQuery);
+    if (!emailsSnap.empty) {
+      alert("Email taken");
+      return;
+    }
 
-  location.href = 'servers.html';
+    // Create user
+    const userCred = await createUserWithEmailAndPassword(auth, email, password);
+
+    // Save username + email linked to uid in Firestore
+    await addDoc(collection(db, 'usernames'), {
+      uid: userCred.user.uid,
+      email,
+      username
+    });
+
+    alert("Signup successful! Redirecting...");
+    location.href = 'servers.html';
+
+  } catch (err) {
+    alert("Signup error: " + err.message);
+  }
 });
 
 // LOGIN
@@ -43,29 +66,55 @@ document.getElementById('login')?.addEventListener('click', async () => {
   const identifier = document.getElementById('email').value.trim();
   const password = document.getElementById('password').value;
 
-  let email = identifier;
-
-  // If username was used, convert to email
-  if (!identifier.includes('@')) {
-    const usernameSnap = await getDocs(query(collection(db, 'usernames'), where("username", "==", identifier)));
-    if (usernameSnap.empty) return alert("Invalid username");
-    email = usernameSnap.docs[0].data().email;
+  if (!identifier || !password) {
+    alert('Please fill in all fields.');
+    return;
   }
 
-  await signInWithEmailAndPassword(auth, email, password);
-  location.href = 'servers.html';
+  try {
+    let email = identifier;
+
+    // If username was entered instead of email, lookup email by username
+    if (!identifier.includes('@')) {
+      const usernameQuery = query(collection(db, 'usernames'), where("username", "==", identifier));
+      const usernameSnap = await getDocs(usernameQuery);
+      if (usernameSnap.empty) {
+        alert("Invalid username");
+        return;
+      }
+      email = usernameSnap.docs[0].data().email;
+    }
+
+    await signInWithEmailAndPassword(auth, email, password);
+    alert("Login successful! Redirecting...");
+    location.href = 'servers.html';
+
+  } catch (err) {
+    alert("Login error: " + err.message);
+  }
 });
 
-// DELETE ACCOUNT
+// DELETE ACCOUNT (optional, add a button with id 'delete-account' on your servers.html)
 document.getElementById('delete-account')?.addEventListener('click', async () => {
-  const user = auth.currentUser;
-  const usernameSnap = await getDocs(query(collection(db, 'usernames'), where("uid", "==", user.uid)));
+  try {
+    const user = auth.currentUser;
+    if (!user) {
+      alert("No user logged in");
+      return;
+    }
 
-  for (const docSnap of usernameSnap.docs) {
-    await deleteDoc(doc(db, 'usernames', docSnap.id));
+    const usernameQuery = query(collection(db, 'usernames'), where("uid", "==", user.uid));
+    const usernameSnap = await getDocs(usernameQuery);
+
+    for (const docSnap of usernameSnap.docs) {
+      await deleteDoc(doc(db, 'usernames', docSnap.id));
+    }
+
+    await deleteUser(user);
+    alert("Account deleted");
+    location.href = 'login.html';
+
+  } catch (err) {
+    alert("Delete account error: " + err.message);
   }
-
-  await deleteUser(user);
-  alert("Account deleted");
-  location.href = 'login.html';
 });
