@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8" />
+  <title>Vylinx</title>
+  <style>
+    body {
+      background: #2f3136;
+      color: white;
+      font-family: 'Segoe UI', sans-serif;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+    }
+    header {
+      background: #202225;
+      padding: 10px;
+      font-weight: bold;
+      font-size: 20px;
+    }
+    main {
+      flex: 1;
+      padding: 20px;
+      overflow-y: auto;
+    }
+    #chat {
+      margin-top: auto;
+      padding: 10px;
+    }
+    input {
+      width: 80%;
+      padding: 10px;
+    }
+    button {
+      padding: 10px;
+    }
+  </style>
+</head>
+<body>
+  <header id="server-name">Loading...</header>
+  <main id="messages"></main>
+  <div id="chat">
+    <input id="msg-input" placeholder="Type a message..." />
+    <button id="send-msg">Send</button>
+  </div>
+
+  <script type="module" src="./firebase-config.js"></script>
+  <script type="module" src="./server-view.js"></script>
+</body>
+</html>
