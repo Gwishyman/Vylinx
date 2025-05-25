@@ -1,120 +1,98 @@
-import { auth, db } from './firebase-config.js';
+// auth.js
+import { initializeApp } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-app.js";
 import {
+  getAuth,
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
-  deleteUser
+  deleteUser,
+  onAuthStateChanged
 } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-auth.js";
-
 import {
-  collection,
-  addDoc,
-  getDocs,
+  getFirestore,
+  doc,
+  setDoc,
+  getDoc,
   query,
+  collection,
   where,
-  deleteDoc,
-  doc
+  getDocs,
+  deleteDoc
 } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-firestore.js";
 
-// SIGN UP
-document.getElementById('signup')?.addEventListener('click', async () => {
-  const username = document.getElementById('username').value.trim();
-  const email = document.getElementById('email').value.trim();
-  const password = document.getElementById('password').value;
+const firebaseConfig = {
+  apiKey: "AIzaSyBHY0RBY3jK7ZnuM2anIbKzFDd65xwMiyg",
+  authDomain: "vylinx-11e87.firebaseapp.com",
+  projectId: "vylinx-11e87",
+  storageBucket: "vylinx-11e87.firebasestorage.app",
+  messagingSenderId: "710300713760",
+  appId: "1:710300713760:web:c4ee8f53be614f5869cd45"
+};
 
-  if (!username || !email || !password) {
-    alert('Please fill in all fields.');
-    return;
-  }
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
 
-  try {
-    // Check if username is taken
-    const usernameQuery = query(collection(db, 'usernames'), where("username", "==", username));
-    const usernamesSnap = await getDocs(usernameQuery);
-    if (!usernamesSnap.empty) {
-      alert("Username taken");
-      return;
-    }
-
-    // Check if email is taken
-    const emailQuery = query(collection(db, 'usernames'), where("email", "==", email));
-    const emailsSnap = await getDocs(emailQuery);
-    if (!emailsSnap.empty) {
-      alert("Email taken");
-      return;
-    }
-
-    // Create user
-    const userCred = await createUserWithEmailAndPassword(auth, email, password);
-
-    // Save username + email linked to uid in Firestore
-    await addDoc(collection(db, 'usernames'), {
-      uid: userCred.user.uid,
-      email,
-      username
-    });
-
-    alert("Signup successful! Redirecting...");
-    location.href = 'servers.html';
-
-  } catch (err) {
-    alert("Signup error: " + err.message);
-  }
-});
+const loginBtn = document.getElementById("login");
+const signupBtn = document.getElementById("signup");
 
 // LOGIN
-document.getElementById('login')?.addEventListener('click', async () => {
-  const identifier = document.getElementById('email').value.trim();
-  const password = document.getElementById('password').value;
+if (loginBtn) {
+  loginBtn.onclick = async () => {
+    const emailOrUsername = document.getElementById("email").value.trim();
+    const password = document.getElementById("password").value;
 
-  if (!identifier || !password) {
-    alert('Please fill in all fields.');
-    return;
-  }
+    let email = emailOrUsername;
 
-  try {
-    let email = identifier;
-
-    // If username was entered instead of email, lookup email by username
-    if (!identifier.includes('@')) {
-      const usernameQuery = query(collection(db, 'usernames'), where("username", "==", identifier));
-      const usernameSnap = await getDocs(usernameQuery);
-      if (usernameSnap.empty) {
-        alert("Invalid username");
-        return;
-      }
-      email = usernameSnap.docs[0].data().email;
+    if (!emailOrUsername.includes("@")) {
+      const q = query(collection(db, "users"), where("username", "==", emailOrUsername));
+      const snapshot = await getDocs(q);
+      if (snapshot.empty) return alert("Username not found");
+      email = snapshot.docs[0].data().email;
     }
 
-    await signInWithEmailAndPassword(auth, email, password);
-    alert("Login successful! Redirecting...");
-    location.href = 'servers.html';
-
-  } catch (err) {
-    alert("Login error: " + err.message);
-  }
-});
-
-// DELETE ACCOUNT (optional, add a button with id 'delete-account' on your servers.html)
-document.getElementById('delete-account')?.addEventListener('click', async () => {
-  try {
-    const user = auth.currentUser;
-    if (!user) {
-      alert("No user logged in");
-      return;
+    try {
+      await signInWithEmailAndPassword(auth, email, password);
+      location.href = "servers.html";
+    } catch (e) {
+      alert("Login failed: " + e.message);
     }
+  };
+}
 
-    const usernameQuery = query(collection(db, 'usernames'), where("uid", "==", user.uid));
-    const usernameSnap = await getDocs(usernameQuery);
+// SIGNUP
+if (signupBtn) {
+  signupBtn.onclick = async () => {
+    const username = document.getElementById("username").value.trim();
+    const email = document.getElementById("email").value.trim();
+    const password = document.getElementById("password").value;
 
-    for (const docSnap of usernameSnap.docs) {
-      await deleteDoc(doc(db, 'usernames', docSnap.id));
+    const q1 = query(collection(db, "users"), where("username", "==", username));
+    const q2 = query(collection(db, "users"), where("email", "==", email));
+    const res1 = await getDocs(q1);
+    const res2 = await getDocs(q2);
+
+    if (!username || !email || !password) return alert("Fill all fields");
+    if (!email.includes("@")) return alert("Invalid email");
+    if (!password || password.length < 6) return alert("Password too short");
+    if (!res1.empty) return alert("Username already in use");
+    if (!res2.empty) return alert("Email already in use");
+
+    try {
+      const userCred = await createUserWithEmailAndPassword(auth, email, password);
+      await setDoc(doc(db, "users", userCred.user.uid), { username, email });
+      location.href = "servers.html";
+    } catch (e) {
+      alert("Signup failed: " + e.message);
     }
+  };
+}
 
-    await deleteUser(user);
-    alert("Account deleted");
-    location.href = 'login.html';
-
-  } catch (err) {
-    alert("Delete account error: " + err.message);
-  }
-});
+// DELETE ACCOUNT
+export async function deleteCurrentUser() {
+  const user = auth.currentUser;
+  if (!user) return;
+  await deleteDoc(doc(db, "users", user.uid));
+  await deleteUser(user);
+  alert("Account deleted");
+  location.href = "index.html";
+}
