@@ -1,119 +1,141 @@
-// auth.js
-import { initializeApp } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-app.js";
-import {
-  getAuth,
-  createUserWithEmailAndPassword,
-  signInWithEmailAndPassword,
-  deleteUser
-} from "https://www.gstatic.com/firebasejs/11.8.1/firebase-auth.js";
-import {
-  getDatabase,
-  ref,
-  set,
-  get
-} from "https://www.gstatic.com/firebasejs/11.8.1/firebase-database.js";
-import { getFirestore } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-firestore.js";
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Servers</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background-color: #1e1e2f;
+      color: white;
+      display: flex;
+      height: 100vh;
+    }
+    #sidebar {
+      width: 250px;
+      background-color: #2c2f4a;
+      padding: 10px;
+      display: flex;
+      flex-direction: column;
+    }
+    #servers {
+      flex-grow: 1;
+      overflow-y: auto;
+    }
+    .server {
+      background-color: #3a3f63;
+      padding: 12px;
+      margin: 5px 0;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: background-color 0.2s;
+    }
+    .server:hover {
+      background-color: #4a4f76;
+    }
+    #header {
+      background-color: #2c2f4a;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 15px;
+      font-size: 1.1rem;
+    }
+    #header button {
+      background: #3a86ff;
+      color: white;
+      border: none;
+      padding: 8px 12px;
+      border-radius: 5px;
+      cursor: pointer;
+      font-weight: bold;
+    }
+    #header button:hover {
+      background-color: #2a6ed1;
+    }
+  </style>
+</head>
+<body>
+  <div id="sidebar">
+    <div id="header">
+      <span>Servers</span>
+      <button id="addServer">+</button>
+    </div>
+    <div id="servers"></div>
+    <button id="deleteAccount" style="margin-top: auto; background-color: red;">Delete Account</button>
+  </div>
 
-const firebaseConfig = {
-  apiKey: "AIzaSyBHY0RBY3jK7ZnuM2anIbKzFDd65xwMiyg",
-  authDomain: "vylinx-11e87.firebaseapp.com",
-  projectId: "vylinx-11e87",
-  storageBucket: "vylinx-11e87.appspot.com",
-  messagingSenderId: "710300713760",
-  appId: "1:710300713760:web:c4ee8f53be614f5869cd45",
-  databaseURL: "https://vylinx-11e87-default-rtdb.firebaseio.com"
-};
+  <script type="module">
+    import { auth, db, deleteCurrentUser } from "./auth.js";
+    import {
+      onAuthStateChanged
+    } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-auth.js";
+    import {
+      collection,
+      addDoc,
+      getDocs,
+      serverTimestamp
+    } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-firestore.js";
 
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const db = getFirestore(app);
-const rtdb = getDatabase(app); // For Realtime Database (user data)
+    const serversList = document.getElementById("servers");
+    const addServerBtn = document.getElementById("addServer");
+    const deleteAccountBtn = document.getElementById("deleteAccount");
+    let currentUser = null;
 
-// SIGNUP
-const signupBtn = document.getElementById("signup");
-if (signupBtn) {
-  signupBtn.addEventListener("click", async () => {
-    const username = document.getElementById("username")?.value.trim();
-    const email = document.getElementById("email")?.value.trim();
-    const password = document.getElementById("password")?.value;
+    onAuthStateChanged(auth, async (user) => {
+      if (!user) return location.href = "index.html";
+      currentUser = user;
+      console.log("✅ Logged in as:", user.email);
+      loadServers();
+    });
 
-    if (!username || !email || !password) {
-      alert("Please fill out all fields.");
-      return;
+    async function loadServers() {
+      serversList.innerHTML = "";
+      try {
+        const querySnapshot = await getDocs(collection(db, "servers"));
+        querySnapshot.forEach((doc) => {
+          const serverData = doc.data();
+          const div = document.createElement("div");
+          div.className = "server";
+          div.textContent = serverData.name;
+          div.onclick = () => {
+            localStorage.setItem("serverId", doc.id);
+            location.href = "server.html";
+          };
+          serversList.appendChild(div);
+        });
+      } catch (err) {
+        console.error("❌ Failed to load servers:", err.message);
+      }
     }
 
-    try {
-      const snapshot = await get(ref(rtdb, "users"));
-      const existingUsers = snapshot.exists() ? snapshot.val() : {};
-      const usernameExists = Object.values(existingUsers).some(u => u.username === username);
+    addServerBtn.onclick = async () => {
+      const name = prompt("Enter server name:");
+      if (!name) return;
 
-      if (usernameExists) {
-        alert("Username already taken.");
+      if (!currentUser) {
+        alert("Not logged in. Please refresh and log in again.");
         return;
       }
 
-      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-      const uid = userCredential.user.uid;
-
-      await set(ref(rtdb, "users/" + uid), {
-        username,
-        email
-      });
-
-      alert("Signup successful!");
-      window.location.href = "servers.html";
-    } catch (error) {
-      alert("Signup error: " + error.message);
-    }
-  });
-}
-
-// LOGIN
-const loginBtn = document.getElementById("login");
-if (loginBtn) {
-  loginBtn.addEventListener("click", async () => {
-    const input = document.getElementById("email")?.value.trim();
-    const password = document.getElementById("password")?.value;
-
-    if (!input || !password) {
-      alert("Please enter both email/username and password.");
-      return;
-    }
-
-    try {
-      let emailToUse = input;
-      if (!input.includes("@")) {
-        const snapshot = await get(ref(rtdb, "users"));
-        const users = snapshot.exists() ? snapshot.val() : {};
-        const match = Object.values(users).find(u => u.username === input);
-        if (!match) {
-          alert("Username not found.");
-          return;
-        }
-        emailToUse = match.email;
+      try {
+        await addDoc(collection(db, "servers"), {
+          name,
+          createdBy: currentUser.uid,
+          createdAt: serverTimestamp()
+        });
+        loadServers();
+      } catch (err) {
+        alert("Failed to create server: " + err.message);
       }
+    };
 
-      await signInWithEmailAndPassword(auth, emailToUse, password);
-      alert("Login successful!");
-      window.location.href = "servers.html";
-    } catch (error) {
-      alert("Login error: " + error.message);
-    }
-  });
-}
-
-// EXPORTS
-export { auth, db, deleteCurrentUser };
-
-async function deleteCurrentUser() {
-  try {
-    const user = auth.currentUser;
-    if (!user) throw new Error("No user is logged in");
-
-    await deleteUser(user);
-    alert("Account deleted.");
-    window.location.href = "index.html";
-  } catch (err) {
-    alert("Error deleting account: " + err.message);
-  }
-}
+    deleteAccountBtn.onclick = async () => {
+      if (confirm("Are you sure you want to delete your account? This can't be undone.")) {
+        await deleteCurrentUser();
+      }
+    };
+  </script>
+</body>
+</html>
