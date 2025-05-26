@@ -1,91 +1,119 @@
-<script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-app.js";
-  import {
-    getAuth,
-    onAuthStateChanged
-  } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-auth.js";
-  import {
-    getFirestore,
-    collection,
-    addDoc,
-    getDocs,
-    serverTimestamp
-  } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-firestore.js";
-  import { deleteCurrentUser } from "./auth.js";
+// auth.js
+import { initializeApp } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-app.js";
+import {
+  getAuth,
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
+  deleteUser
+} from "https://www.gstatic.com/firebasejs/11.8.1/firebase-auth.js";
+import {
+  getDatabase,
+  ref,
+  set,
+  get
+} from "https://www.gstatic.com/firebasejs/11.8.1/firebase-database.js";
+import { getFirestore } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-firestore.js";
 
-  const firebaseConfig = {
-    apiKey: "AIzaSyBHY0RBY3jK7ZnuM2anIbKzFDd65xwMiyg",
-    authDomain: "vylinx-11e87.firebaseapp.com",
-    projectId: "vylinx-11e87",
-    storageBucket: "vylinx-11e87.appspot.com", // ✅ FIXED URL
-    messagingSenderId: "710300713760",
-    appId: "1:710300713760:web:c4ee8f53be614f5869cd45"
-  };
+const firebaseConfig = {
+  apiKey: "AIzaSyBHY0RBY3jK7ZnuM2anIbKzFDd65xwMiyg",
+  authDomain: "vylinx-11e87.firebaseapp.com",
+  projectId: "vylinx-11e87",
+  storageBucket: "vylinx-11e87.appspot.com",
+  messagingSenderId: "710300713760",
+  appId: "1:710300713760:web:c4ee8f53be614f5869cd45",
+  databaseURL: "https://vylinx-11e87-default-rtdb.firebaseio.com"
+};
 
-  const app = initializeApp(firebaseConfig);
-  const db = getFirestore(app);
-  const auth = getAuth(app);
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+const rtdb = getDatabase(app); // For Realtime Database (user data)
 
-  let currentUser = null;
+// SIGNUP
+const signupBtn = document.getElementById("signup");
+if (signupBtn) {
+  signupBtn.addEventListener("click", async () => {
+    const username = document.getElementById("username")?.value.trim();
+    const email = document.getElementById("email")?.value.trim();
+    const password = document.getElementById("password")?.value;
 
-  const serversList = document.getElementById("servers");
-  const addServerBtn = document.getElementById("addServer");
-  const deleteAccountBtn = document.getElementById("deleteAccount");
-
-  onAuthStateChanged(auth, async (user) => {
-    if (!user) return location.href = "index.html";
-    currentUser = user;
-    console.log("✅ Logged in as:", user.email);
-    loadServers();
-  });
-
-  async function loadServers() {
-    serversList.innerHTML = "";
-    try {
-      const querySnapshot = await getDocs(collection(db, "servers"));
-      querySnapshot.forEach((doc) => {
-        const serverData = doc.data();
-        const div = document.createElement("div");
-        div.className = "server";
-        div.textContent = serverData.name;
-        div.onclick = () => {
-          localStorage.setItem("serverId", doc.id);
-          location.href = "server.html";
-        };
-        serversList.appendChild(div);
-      });
-    } catch (err) {
-      console.error("❌ Failed to load servers:", err.message);
-    }
-  }
-
-  addServerBtn.onclick = async () => {
-    const name = prompt("Enter server name:");
-    if (!name) return;
-
-    if (!currentUser) {
-      alert("Not logged in. Please refresh and log in again.");
+    if (!username || !email || !password) {
+      alert("Please fill out all fields.");
       return;
     }
 
     try {
-      console.log("🛠 Creating server:", name);
-      await addDoc(collection(db, "servers"), {
-        name,
-        createdBy: currentUser.uid,
-        createdAt: serverTimestamp()
-      });
-      console.log("✅ Server created.");
-      loadServers();
-    } catch (err) {
-      console.error("❌ Failed to create server:", err.message);
-      alert("Could not create server: " + err.message);
-    }
-  };
+      const snapshot = await get(ref(rtdb, "users"));
+      const existingUsers = snapshot.exists() ? snapshot.val() : {};
+      const usernameExists = Object.values(existingUsers).some(u => u.username === username);
 
-  deleteAccountBtn.onclick = async () => {
-    if (confirm("Are you sure you want to delete your account? This can't be undone.")) {
-      await deleteCurrentUser();
+      if (usernameExists) {
+        alert("Username already taken.");
+        return;
+      }
+
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      const uid = userCredential.user.uid;
+
+      await set(ref(rtdb, "users/" + uid), {
+        username,
+        email
+      });
+
+      alert("Signup successful!");
+      window.location.href = "servers.html";
+    } catch (error) {
+      alert("Signup error: " + error.message);
     }
-  };
-</script>
+  });
+}
+
+// LOGIN
+const loginBtn = document.getElementById("login");
+if (loginBtn) {
+  loginBtn.addEventListener("click", async () => {
+    const input = document.getElementById("email")?.value.trim();
+    const password = document.getElementById("password")?.value;
+
+    if (!input || !password) {
+      alert("Please enter both email/username and password.");
+      return;
+    }
+
+    try {
+      let emailToUse = input;
+      if (!input.includes("@")) {
+        const snapshot = await get(ref(rtdb, "users"));
+        const users = snapshot.exists() ? snapshot.val() : {};
+        const match = Object.values(users).find(u => u.username === input);
+        if (!match) {
+          alert("Username not found.");
+          return;
+        }
+        emailToUse = match.email;
+      }
+
+      await signInWithEmailAndPassword(auth, emailToUse, password);
+      alert("Login successful!");
+      window.location.href = "servers.html";
+    } catch (error) {
+      alert("Login error: " + error.message);
+    }
+  });
+}
+
+// EXPORTS
+export { auth, db, deleteCurrentUser };
+
+async function deleteCurrentUser() {
+  try {
+    const user = auth.currentUser;
+    if (!user) throw new Error("No user is logged in");
+
+    await deleteUser(user);
+    alert("Account deleted.");
+    window.location.href = "index.html";
+  } catch (err) {
+    alert("Error deleting account: " + err.message);
+  }
+}
