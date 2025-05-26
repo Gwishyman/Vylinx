@@ -1,187 +1,91 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <title>Servers</title>
-  <style>
-    body {
-      margin: 0;
-      font-family: Arial, sans-serif;
-      background-color: #1e1e2f;
-      color: white;
-      display: flex;
-      height: 100vh;
-    }
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-app.js";
+  import {
+    getAuth,
+    onAuthStateChanged
+  } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-auth.js";
+  import {
+    getFirestore,
+    collection,
+    addDoc,
+    getDocs,
+    serverTimestamp
+  } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-firestore.js";
+  import { deleteCurrentUser } from "./auth.js";
 
-    #sidebar {
-      width: 250px;
-      background-color: #2c2f4a;
-      padding: 10px;
-      display: flex;
-      flex-direction: column;
-    }
+  const firebaseConfig = {
+    apiKey: "AIzaSyBHY0RBY3jK7ZnuM2anIbKzFDd65xwMiyg",
+    authDomain: "vylinx-11e87.firebaseapp.com",
+    projectId: "vylinx-11e87",
+    storageBucket: "vylinx-11e87.appspot.com", // ✅ FIXED URL
+    messagingSenderId: "710300713760",
+    appId: "1:710300713760:web:c4ee8f53be614f5869cd45"
+  };
 
-    #servers {
-      flex-grow: 1;
-      overflow-y: auto;
-    }
+  const app = initializeApp(firebaseConfig);
+  const db = getFirestore(app);
+  const auth = getAuth(app);
 
-    .server {
-      background-color: #3a3f63;
-      padding: 12px;
-      margin: 5px 0;
-      border-radius: 6px;
-      cursor: pointer;
-      transition: background-color 0.2s;
-    }
+  let currentUser = null;
 
-    .server:hover {
-      background-color: #4a4f76;
-    }
+  const serversList = document.getElementById("servers");
+  const addServerBtn = document.getElementById("addServer");
+  const deleteAccountBtn = document.getElementById("deleteAccount");
 
-    #header {
-      background-color: #2c2f4a;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 10px 15px;
-      font-size: 1.1rem;
-    }
-
-    #header button {
-      background: #3a86ff;
-      color: white;
-      border: none;
-      padding: 8px 12px;
-      border-radius: 5px;
-      cursor: pointer;
-      font-weight: bold;
-    }
-
-    #header button:hover {
-      background-color: #2a6ed1;
-    }
-  </style>
-</head>
-<body>
-  <div id="sidebar">
-    <div id="header">
-      <span>Servers</span>
-      <button id="addServer">+</button>
-    </div>
-    <div id="servers"></div>
-    <button id="deleteAccount" style="margin-top: auto; background-color: red;">Delete Account</button>
-  </div>
-
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-app.js";
-    import {
-      getAuth,
-      onAuthStateChanged
-    } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-auth.js";
-    import {
-      getFirestore,
-      collection,
-      addDoc,
-      getDocs,
-      doc,
-      deleteDoc,
-      setDoc,
-      serverTimestamp
-    } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-firestore.js";
-    import { deleteCurrentUser } from "./auth.js";
-
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-app.js";
-    import { getFirestore, collection, addDoc, getDocs, ... } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-firestore.js";
-
-const firebaseConfig = {
-  apiKey: "AIzaSyBHY0RBY3jK7ZnuM2anIbKzFDd65xwMiyg",
-  authDomain: "vylinx-11e87.firebaseapp.com",
-  projectId: "vylinx-11e87",
-  storageBucket: "vylinx-11e87.appspot.com", // ✅ corrected from `.firebasestorage.app`
-  messagingSenderId: "710300713760",
-  appId: "1:710300713760:web:c4ee8f53be614f5869cd45"
-};
-
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
-const auth = getAuth(app);
-
-
-
-    const app = initializeApp(firebaseConfig);
-    const db = getFirestore(app);
-    const auth = getAuth(app);
-    let currentUser;
-
-    const serversList = document.getElementById("servers");
-    const addServerBtn = document.getElementById("addServer");
-    const deleteAccountBtn = document.getElementById("deleteAccount");
-
-    onAuthStateChanged(auth, async (user) => {
-      if (!user) return location.href = "index.html";
-      currentUser = user;
-      loadServers();
-    });
-
-    import { query, where } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-firestore.js";
-
-async function loadServers() {
-  serversList.innerHTML = "";
-  const serversRef = collection(db, "servers");
-  const q = query(serversRef, where("createdBy", "==", currentUser.uid));
-  const querySnapshot = await getDocs(q);
-  querySnapshot.forEach((doc) => {
-    const serverData = doc.data();
-    const div = document.createElement("div");
-    div.className = "server";
-    div.textContent = serverData.name;
-    div.onclick = () => {
-      localStorage.setItem("serverId", doc.id);
-      location.href = "server.html";
-    };
-    serversList.appendChild(div);
+  onAuthStateChanged(auth, async (user) => {
+    if (!user) return location.href = "index.html";
+    currentUser = user;
+    console.log("✅ Logged in as:", user.email);
+    loadServers();
   });
-}
-  document.getElementById("addServer").onclick = () => alert("It works!");
 
-    addServerBtn.onclick = async () => {
-      const name = prompt("Enter server name:");
-      if (!name) return;
+  async function loadServers() {
+    serversList.innerHTML = "";
+    try {
+      const querySnapshot = await getDocs(collection(db, "servers"));
+      querySnapshot.forEach((doc) => {
+        const serverData = doc.data();
+        const div = document.createElement("div");
+        div.className = "server";
+        div.textContent = serverData.name;
+        div.onclick = () => {
+          localStorage.setItem("serverId", doc.id);
+          location.href = "server.html";
+        };
+        serversList.appendChild(div);
+      });
+    } catch (err) {
+      console.error("❌ Failed to load servers:", err.message);
+    }
+  }
+
+  addServerBtn.onclick = async () => {
+    const name = prompt("Enter server name:");
+    if (!name) return;
+
+    if (!currentUser) {
+      alert("Not logged in. Please refresh and log in again.");
+      return;
+    }
+
+    try {
+      console.log("🛠 Creating server:", name);
       await addDoc(collection(db, "servers"), {
         name,
         createdBy: currentUser.uid,
         createdAt: serverTimestamp()
       });
+      console.log("✅ Server created.");
       loadServers();
-    };
-
-    deleteAccountBtn.onclick = async () => {
-      if (confirm("Are you sure you want to delete your account? This can't be undone.")) {
-        await deleteCurrentUser();
-      }
-    };
-    import { deleteDoc, doc } from "https://www.gstatic.com/firebasejs/11.8.1/firebase-firestore.js";
-  
-function createServerElement(doc) {
-  const serverData = doc.data();
-  const div = document.createElement("div");
-  div.className = "server";
-  div.textContent = serverData.name;
-
-  const deleteBtn = document.createElement("button");
-  deleteBtn.textContent = "Delete";
-  deleteBtn.onclick = async () => {
-    if (confirm("Are you sure you want to delete this server?")) {
-      await deleteDoc(doc(db, "servers", doc.id));
-      loadServers();
+    } catch (err) {
+      console.error("❌ Failed to create server:", err.message);
+      alert("Could not create server: " + err.message);
     }
   };
 
-  div.appendChild(deleteBtn);
-  return div;
-}
-
-  </script>
-</body>
-</html>
+  deleteAccountBtn.onclick = async () => {
+    if (confirm("Are you sure you want to delete your account? This can't be undone.")) {
+      await deleteCurrentUser();
+    }
+  };
+</script>
