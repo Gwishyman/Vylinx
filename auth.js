@@ -103,17 +103,20 @@ if (loginBtn) {
 }
 
 // EXPORTS
-export { auth, db, deleteCurrentUser };
+export async function deleteCurrentUser() {
+  const user = auth.currentUser;
+  if (!user) return;
 
-async function deleteCurrentUser() {
-  try {
-    const user = auth.currentUser;
-    if (!user) throw new Error("No user is logged in");
+  const serversSnap = await getDocs(collection(db, "servers"));
+  const deletions = [];
+  serversSnap.forEach((doc) => {
+    if (doc.data().createdBy === user.uid) {
+      deletions.push(deleteDoc(doc.ref));
+    }
+  });
 
-    await deleteUser(user);
-    alert("Account deleted.");
-    window.location.href = "index.html";
-  } catch (err) {
-    alert("Error deleting account: " + err.message);
-  }
+  await Promise.all(deletions);
+  await deleteUser(user);
+  alert("Account and your servers deleted.");
+  window.location.href = "index.html";
 }
